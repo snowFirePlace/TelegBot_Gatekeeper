@@ -38,6 +38,10 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 		if update.Message == nil { // If we got a message
 
 		}
+		if update.EditedMessage != nil {
+			continue
+		}
+
 		if update.Message.IsCommand() { // If we got a command
 			b.Command(update.Message)
 			continue
