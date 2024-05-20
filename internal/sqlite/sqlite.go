@@ -191,7 +191,7 @@ func (s *Storage) DelAdmin(ctx context.Context, fio string) error {
 		return fmt.Errorf("can't delete user: %w", err)
 	}
 	if !exist {
-		return fmt.Errorf("can't delete user: user doesn't exist")
+		return fmt.Errorf("Пользователь не найден")
 	}
 	q := `Delete from admins,users where admins.id = users.id and users.fio = ?`
 
@@ -199,4 +199,27 @@ func (s *Storage) DelAdmin(ctx context.Context, fio string) error {
 		return fmt.Errorf("can't delete user: %w", err)
 	}
 	return nil
+}
+func (s *Storage) Registration(ctx context.Context, fio, phone string, id int64) error {
+
+	exist, err := s.IsExist(ctx, `SELECT COUNT(*) FROM users WHERE fio = ? and phone = ?`, fio, phone)
+	if err != nil {
+		return fmt.Errorf("Error in Registration: %w", err)
+	}
+	if exist {
+		existID, err := s.IsExist(ctx, `SELECT COUNT(*) FROM users WHERE fio = ? and phone = ? and idUserTeleg = ?`, fio, phone, id)
+		if err != nil {
+			return fmt.Errorf("Пользователь уже зарегистрирован")
+			// return fmt.Errorf("can't add user: %w", err)
+		}
+		if !existID {
+			q := `UPDATE users SET idUserTeleg = ? WHERE fio = ? and phone = ?`
+			if _, err := s.db.ExecContext(ctx, q, id, fio, phone); err != nil {
+				return fmt.Errorf("Error in Registration.Update: %w", err)
+			}
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Нет доступа.")
 }

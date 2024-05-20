@@ -9,15 +9,17 @@ import (
 )
 
 const (
-	commandStart       = "start"
-	commandHelp        = "help"
-	commandAddUser     = "add"
-	commandUsers       = "list"
-	commandDeleteUser  = "del"
-	commandAddAdmin    = "addadmin"
-	commandShowAdmins  = "listadmin"
-	commandDeleteAdmin = "deladmin"
-	commandVersion     = "ver"
+	commandStart        = "start"
+	commandHelp         = "help"
+	commandAddUser      = "add"
+	commandUsers        = "list"
+	commandDeleteUser   = "del"
+	commandAddAdmin     = "addadmin"
+	commandShowAdmins   = "listadmin"
+	commandDeleteAdmin  = "deladmin"
+	commandVersion      = "ver"
+	commandRegistration = "reg"
+	commandLink         = "link"
 )
 
 func (b *Bot) Command(message *tgbotapi.Message) error {
@@ -31,9 +33,9 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 	if level {
 		switch message.Command() {
 		case commandStart:
-			msg.Text = msgHelpAddUser
+			msg.Text = msgWelcome + "\n" + msgHelpAdmin
 		case commandHelp:
-			msg.Text = msgHelpAddUser
+			msg.Text = msgHelpAdmin
 		case commandAddUser:
 			if err := b.commandAddUser(message); err != nil {
 				msg.Text = err.Error()
@@ -48,6 +50,13 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 		case commandDeleteUser:
 			if err := b.commandDeleteUser(message); err != nil {
 				msg.Text = err.Error()
+			} else {
+				msg.Text = "Пользователь удален"
+			}
+
+		case commandDeleteAdmin:
+			if err := b.commandDelAdmin(message); err != nil {
+				msg.Text = err.Error()
 			}
 		case commandAddAdmin:
 			if err := b.commandAddAdmin(message); err != nil {
@@ -60,19 +69,26 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 			} else {
 				msg.Text = s
 			}
-		case commandVersion:
 
 		default:
-			msg.Text = "Неизвестная команда" + msgHelp
+			msg.Text = "Неизвестная команда" + msgHelpAdmin
 
 		}
 
 	} else {
 		switch message.Command() {
 		case commandStart:
+			msg.Text = msgWelcome + "\n" + msgHelp
+		case commandRegistration:
+			if link, err := b.commandRegistration(message); err != nil {
+				msg.Text = err.Error()
+			} else {
+				msg.Text = link
+			}
+		case commandLink:
 
 		default:
-
+			msg.Text = "Неизвестная команда" + msgHelp
 		}
 
 	}
@@ -86,6 +102,7 @@ func (b *Bot) commandGetUser(message *tgbotapi.Message) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return str, nil
 }
 func (b *Bot) commandAddUser(message *tgbotapi.Message) (err error) {
@@ -163,4 +180,36 @@ func (b *Bot) commandDelAdmin(message *tgbotapi.Message) error {
 		return err
 	}
 	return nil
+}
+func (b *Bot) commandRegistration(message *tgbotapi.Message) (link string, err error) {
+	q := message.CommandArguments()
+	if len(strings.Replace(q, " ", "", -1)) == 0 {
+		return "", fmt.Errorf("Не верный запрос.\n" + msgHelp)
+	}
+	a := strings.Split(q, ",")
+	if len(a) != 2 {
+		err := fmt.Errorf("Не верный запрос.\n" + msgHelp)
+		return "", err
+	}
+	fio := strings.TrimSpace(a[0])
+	phone := strings.TrimSpace(a[1])
+	if err := b.storage.Registration(context.Background(), fio, phone, message.From.ID); err != nil {
+		return "", err
+	}
+	link, err = b.commandGetLink(message)
+	if err != nil {
+		return "", err
+	}
+
+	return
+}
+func (b *Bot) commandGetLink(message *tgbotapi.Message) (string, error) {
+	chat := tgbotapi.ChatInviteLinkConfig{b.channel}
+
+	link, err := b.bot.GetInviteLink(chat)
+	if err != nil {
+		return "", err
+	}
+
+	return link, nil
 }

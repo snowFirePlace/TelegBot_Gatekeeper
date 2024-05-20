@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	TelegramBotToken string `yaml:"telegram_bot_token"`
+	TelegramChannel  int64  `yaml:"telegram_channel_id"`
 	Admin            Admin
 }
 

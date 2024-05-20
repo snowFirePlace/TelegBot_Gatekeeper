@@ -10,12 +10,14 @@ import (
 
 type Bot struct {
 	bot     *tgbotapi.BotAPI
+	channel tgbotapi.ChatConfig
 	storage sqlite.Storage
 }
 
-func NewBot(bot *tgbotapi.BotAPI, storage *sqlite.Storage) *Bot {
+func NewBot(bot *tgbotapi.BotAPI, telegram_channel_id tgbotapi.ChatConfig, storage *sqlite.Storage) *Bot {
 	return &Bot{
 		bot:     bot,
+		channel: telegram_channel_id,
 		storage: *storage,
 	}
 }
@@ -38,10 +40,13 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 		if update.Message == nil { // If we got a message
 
 		}
+
 		if update.EditedMessage != nil {
 			continue
 		}
-
+		if update.ChannelPost != nil {
+			continue
+		}
 		if update.Message.IsCommand() { // If we got a command
 			b.Command(update.Message)
 			continue

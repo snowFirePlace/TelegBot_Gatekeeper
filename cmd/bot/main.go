@@ -34,8 +34,10 @@ func main() {
 	}
 
 	botApi.Debug = true
-
-	bot := telegram.NewBot(botApi, s)
+	channel := tgbotapi.ChatConfig{
+		ChatID: cfg.TelegramChannel,
+	}
+	bot := telegram.NewBot(botApi, channel, s)
 
 	bot.Start()
 
