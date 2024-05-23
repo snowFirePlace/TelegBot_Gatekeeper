@@ -36,7 +36,7 @@ func New(path string) (*Storage, error) {
 }
 
 func (s *Storage) Init(ctx context.Context, a config.Admin) error {
-	q := `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, idUserTeleg TEXT, fio TEXT NOT NULL, branch TEXT NOT NULL, unit TEXT NOT NULL, phone TEXT NOT NULL)`
+	q := `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, idUserTeleg TEXT,username TEXT, fio TEXT NOT NULL, branch TEXT NOT NULL, unit TEXT NOT NULL, phone TEXT NOT NULL)`
 	_, err := s.db.ExecContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("can't create users table: %w", err)
@@ -48,7 +48,7 @@ func (s *Storage) Init(ctx context.Context, a config.Admin) error {
 		return fmt.Errorf("can't create admins table: %w", err)
 	}
 
-	q = `CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, date INTEGER, events TEXT)`
+	q = `CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, date INTEGER, event TEXT)`
 	_, err = s.db.ExecContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("can't create admins table: %w", err)
@@ -79,34 +79,37 @@ func (s *Storage) IsExist(ctx context.Context, q string, args ...interface{}) (b
 	if err := s.db.QueryRowContext(ctx, q, args...).Scan(&count); err != nil {
 		return false, fmt.Errorf("can't check exist: %w", err)
 	}
+
 	return count > 0, nil
 }
 
-func (s *Storage) Add(ctx context.Context, fio, branch, unit, phone string) error {
+func (s *Storage) AddUser(ctx context.Context, idUser int64, fio, branch, unit, phone string) error {
 	exist, err := s.IsExist(ctx, `SELECT COUNT(*) FROM users WHERE fio = ?`, fio)
+
 	if err != nil {
-		return fmt.Errorf("can't add user: %w", err)
+		return fmt.Errorf("Error in Add User: %w", err)
 	}
 	if exist {
-		return fmt.Errorf("can't add user: user already exists")
+		return fmt.Errorf("Пользователь уже добавлен")
 	}
 	q := `INSERT INTO users (fio, branch, unit, phone) VALUES (?,?,?,?)`
 	if _, err := s.db.ExecContext(ctx, q, fio, branch, unit, phone); err != nil {
-		return fmt.Errorf("can't add user: %w", err)
+		return fmt.Errorf("Error in Add User: %w", err)
+	}
+	if err := s.log(ctx, fmt.Sprintf("User %d add new user: %s %s %s %s", idUser, fio, branch, unit, phone)); err != nil {
+		return err
 	}
 	return nil
 }
 
 func (s *Storage) GetAdmins(ctx context.Context) (err error) {
 	s.Admins = make(map[int]Admin)
-
 	q := `SELECT idUserTeleg, fio FROM users,admins where users.id = admins.id`
 	rows, err := s.db.Query(q)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
-
 	for rows.Next() {
 		var fio string
 		var id string
@@ -121,7 +124,7 @@ func (s *Storage) GetAdmins(ctx context.Context) (err error) {
 }
 func (s *Storage) ShowAdmins(ctx context.Context) (str string, err error) {
 	if err := s.GetAdmins(ctx); err != nil {
-		return "", fmt.Errorf("can't get admins: %w", err)
+		return "", fmt.Errorf("Error in show admins: %w", err)
 	}
 
 	for _, v := range s.Admins {
@@ -129,66 +132,79 @@ func (s *Storage) ShowAdmins(ctx context.Context) (str string, err error) {
 	}
 	return str, nil
 }
-func (s *Storage) Show(ctx context.Context) (str string, err error) {
+func (s *Storage) ShowUsers(ctx context.Context) (str string, err error) {
 	q := `SELECT fio, branch, unit, phone FROM users`
 	rows, err := s.db.QueryContext(ctx, q)
 	if err != nil {
-		return "", fmt.Errorf("can't get users: %w", err)
+		return "", fmt.Errorf("Error in show users: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var fio, branch, unit, phone string
 		err = rows.Scan(&fio, &branch, &unit, &phone)
 		if err != nil {
-			return "", fmt.Errorf("can't get users: %w", err)
+			return "", fmt.Errorf("Error in show users: %w", err)
 		}
 		str = str + fmt.Sprintf("%s, %s, %s, %s\n", fio, branch, unit, phone)
 	}
 	return str, nil
 }
-func (s *Storage) Delete(ctx context.Context, fio string) error {
+func (s *Storage) DelUser(ctx context.Context, idUser int64, fio string) (idDelUser int64, err error) {
 	exist, err := s.IsExist(ctx, `SELECT COUNT(*) FROM admins,users where admins.id = users.id and users.fio = ?`, fio)
 	if err != nil {
-		return fmt.Errorf("can't delete user: %w", err)
+		return 0, fmt.Errorf("Error in delete user: %w", err)
 	}
 	if exist {
-		return fmt.Errorf("Не возможно удалить пользователя с админской ролью")
+		return 0, fmt.Errorf("Не возможно удалить пользователя с админской ролью")
 	}
-	q := `DELETE FROM users WHERE fio = ?`
+	q := `Select idUserTeleg from users where fio = ?`
+	if err := s.db.QueryRowContext(ctx, q, fio).Scan(&idDelUser); err != nil {
+		return 0, fmt.Errorf("Error in delete user: %w", err)
+	}
+
+	q = `DELETE FROM users WHERE fio = ?`
 	if _, err := s.db.ExecContext(ctx, q, fio); err != nil {
-		return fmt.Errorf("can't delete user: %w", err)
+		return 0, fmt.Errorf("Error in delete user: %w", err)
 	}
-	return nil
+
+	if err := s.log(ctx, fmt.Sprintf("User %d deleted: %s", idUser, fio)); err != nil {
+		return 0, err
+	}
+	return idDelUser, nil
 }
-func (s *Storage) AddAdmin(ctx context.Context, fio string, idTeleg int64) error {
+func (s *Storage) AddAdmin(ctx context.Context, idUser int64, fio string, idTeleg int64) error {
 
 	exist, err := s.IsExist(ctx, `SELECT COUNT(*) FROM admins,users where admins.id = users.id and users.fio = ?`, fio)
 	if err != nil {
-		return fmt.Errorf("can't add user: %w", err)
+		return fmt.Errorf("Error in add admin: %w", err)
 	}
 	if exist {
-		return fmt.Errorf("can't add user: user already exists")
+		return fmt.Errorf("Пользователь уже имеет админскую роль")
 	}
 
 	exist, err = s.IsExist(ctx, `SELECT COUNT(*) FROM users WHERE fio = ?`, fio)
 	if err != nil {
-		return fmt.Errorf("can't add user: %w", err)
+		return fmt.Errorf("Error in add admin: %w", err)
 	}
 	if !exist {
-		return fmt.Errorf("can't add user: user doesn't exist")
+		return fmt.Errorf("Пользователь не найден")
 	}
 
 	q := `INSERT INTO admins (id, date, idUserTeleg) VALUES ((select id from users where fio = ?),?,(Select id from users where idUserTeleg = ?))`
 
 	if _, err := s.db.ExecContext(ctx, q, 1, time.Now().Unix(), strconv.FormatInt(idTeleg, 10)); err != nil {
-		return fmt.Errorf("can't add user: %w", err)
+		return fmt.Errorf("Error in add admin: %w", err)
+	}
+
+	if err := s.log(ctx, fmt.Sprintf("User %s add admin: %s", fio, strconv.FormatInt(idTeleg, 10))); err != nil {
+		return err
 	}
 	return nil
 }
-func (s *Storage) DelAdmin(ctx context.Context, fio string) error {
+func (s *Storage) DelAdmin(ctx context.Context, idUser int64, fio string) error {
 	exist, err := s.IsExist(ctx, `SELECT COUNT(*) FROM admins,users where admins.id = users.id and users.fio = ?`, fio)
 	if err != nil {
-		return fmt.Errorf("can't delete user: %w", err)
+		return fmt.Errorf("Error in delete admin: %w", err)
 	}
 	if !exist {
 		return fmt.Errorf("Пользователь не найден")
@@ -196,30 +212,68 @@ func (s *Storage) DelAdmin(ctx context.Context, fio string) error {
 	q := `Delete from admins,users where admins.id = users.id and users.fio = ?`
 
 	if _, err := s.db.ExecContext(ctx, q, fio); err != nil {
-		return fmt.Errorf("can't delete user: %w", err)
+		return fmt.Errorf("Error in delete admin: %w", err)
 	}
+	if err := s.log(ctx, fmt.Sprintf("User %d delete admin: %s", idUser, fio)); err != nil {
+		return err
+	}
+
 	return nil
 }
-func (s *Storage) Registration(ctx context.Context, fio, phone string, id int64) error {
-
-	exist, err := s.IsExist(ctx, `SELECT COUNT(*) FROM users WHERE fio = ? and phone = ?`, fio, phone)
+func (s *Storage) Registration(ctx context.Context, fio, phone string, id int64, username string) error {
+	exist, err := s.IsExist(ctx, `SELECT COUNT(*) FROM users WHERE fio = ?`, fio)
+	if err != nil {
+		return fmt.Errorf("Error in Registration: %w", err)
+	}
+	if !exist {
+		return fmt.Errorf("Доступа запрещен")
+	}
+	exist, err = s.IsExist(ctx, `SELECT COUNT(*) FROM users WHERE fio = ? and idUserTeleg = ?`, fio, id)
 	if err != nil {
 		return fmt.Errorf("Error in Registration: %w", err)
 	}
 	if exist {
-		existID, err := s.IsExist(ctx, `SELECT COUNT(*) FROM users WHERE fio = ? and phone = ? and idUserTeleg = ?`, fio, phone, id)
-		if err != nil {
-			return fmt.Errorf("Пользователь уже зарегистрирован")
-			// return fmt.Errorf("can't add user: %w", err)
+		return fmt.Errorf("Пользователь уже зарегистрирован")
+	}
+	exist, err = s.IsExist(ctx, `SELECT COUNT(*) FROM users WHERE fio = ? and phone = ?`, fio, phone)
+	if err != nil {
+		return fmt.Errorf("Error in Registration: %w", err)
+		// return fmt.Errorf("can't add user: %w", err)
+	}
+	if exist {
+		q := `Update users set idUserTeleg = ?, username = ? where fio = ? and phone = ?`
+		if _, err := s.db.ExecContext(ctx, q, id, username, fio, phone); err != nil {
+			return fmt.Errorf("can't update user data: %w", err)
 		}
-		if !existID {
-			q := `UPDATE users SET idUserTeleg = ? WHERE fio = ? and phone = ?`
-			if _, err := s.db.ExecContext(ctx, q, id, fio, phone); err != nil {
-				return fmt.Errorf("Error in Registration.Update: %w", err)
-			}
-			return nil
+		if err := s.log(ctx, fmt.Sprintf("User %d updated: %s", id, fio)); err != nil {
+			return err
+		}
+		return nil
+	}
+	q := `select phone from users where fio = ?`
+
+	rows, err := s.db.QueryContext(ctx, q, fio)
+	if err != nil {
+		return fmt.Errorf("Error in Registration: %w", err)
+	}
+	defer rows.Close()
+	var p string
+
+	for rows.Next() {
+		if err := rows.Scan(&p); err != nil {
+			return fmt.Errorf("Error in Registration: %w", err)
 		}
 	}
+	return fmt.Errorf("Для регистрации для пользователя %s указан номер телефона: %s\nПовторите попытку, указав верный номер телефона.", fio, hidePhone(p))
+}
+func (s *Storage) log(ctx context.Context, event string) error {
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO logs (date, event) VALUES (?, ?)`, time.Now().Unix(), event); err != nil {
+		return fmt.Errorf("Error in log: %w", err)
+	}
+	return nil
+}
 
-	return fmt.Errorf("Нет доступа.")
+// Todo Move this func to another package
+func hidePhone(phone string) string {
+	return fmt.Sprintf("+7********%s", phone[len(phone)-2:])
 }

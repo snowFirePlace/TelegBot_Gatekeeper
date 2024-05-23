@@ -20,6 +20,8 @@ const (
 	commandVersion      = "ver"
 	commandRegistration = "reg"
 	commandLink         = "link"
+	commandKickUser     = "kick"
+	commandRename       = "rename"
 )
 
 func (b *Bot) Command(message *tgbotapi.Message) error {
@@ -39,6 +41,8 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 		case commandAddUser:
 			if err := b.commandAddUser(message); err != nil {
 				msg.Text = err.Error()
+			} else {
+				msg.Text = "Пользователь успешно добавлен"
 			}
 		case commandUsers:
 			s, err := b.commandGetUser(message)
@@ -68,10 +72,10 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 				msg.Text = err.Error()
 			} else {
 				msg.Text = s
-			}
 
+			}
 		default:
-			msg.Text = "Неизвестная команда" + msgHelpAdmin
+			msg.Text = "Неизвестная команда" + "\n" + msgHelpAdmin
 
 		}
 
@@ -88,7 +92,7 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 		case commandLink:
 
 		default:
-			msg.Text = "Неизвестная команда" + msgHelp
+			msg.Text = "Неизвестная команда" + "\n" + msgHelp
 		}
 
 	}
@@ -98,7 +102,7 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 
 }
 func (b *Bot) commandGetUser(message *tgbotapi.Message) (string, error) {
-	str, err := b.storage.Show(context.Background())
+	str, err := b.storage.ShowUsers(context.Background())
 	if err != nil {
 		return "", err
 	}
@@ -120,7 +124,7 @@ func (b *Bot) commandAddUser(message *tgbotapi.Message) (err error) {
 	unit := strings.TrimSpace(a[2])
 	phone := strings.TrimSpace(a[3])
 
-	if err = b.storage.Add(context.Background(), fio, branch, unit, phone); err != nil {
+	if err = b.storage.AddUser(context.Background(), message.From.ID, fio, branch, unit, phone); err != nil {
 		return err
 	}
 	return nil
@@ -132,8 +136,13 @@ func (b *Bot) commandDeleteUser(message *tgbotapi.Message) error {
 		return fmt.Errorf("Не верный запрос.\n" + msgHelpDelUser)
 	}
 	fio := strings.TrimSpace(q)
-	if err := b.storage.Delete(context.Background(), fio); err != nil {
+	if idUser, err := b.storage.DelUser(context.Background(), message.From.ID, fio); err != nil {
 		return err
+	} else {
+		err := b.KickChatMember(idUser)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -150,7 +159,7 @@ func (b *Bot) commandAddAdmin(message *tgbotapi.Message) error {
 		return fmt.Errorf("Не верный запрос.\n" + msgHelpAddAdmin)
 	}
 	fio := strings.TrimSpace(q)
-	if err := b.storage.AddAdmin(context.Background(), fio, message.From.ID); err != nil {
+	if err := b.storage.AddAdmin(context.Background(), message.From.ID, fio, message.From.ID); err != nil {
 		return err
 	}
 	// TODO reflash admin list
@@ -172,7 +181,7 @@ func (b *Bot) commandDelAdmin(message *tgbotapi.Message) error {
 		return fmt.Errorf("Не верный запрос.\n" + msgHelpDelAdmin)
 	}
 	fio := strings.TrimSpace(q)
-	if err := b.storage.DelAdmin(context.Background(), fio); err != nil {
+	if err := b.storage.DelAdmin(context.Background(), message.From.ID, fio); err != nil {
 		return err
 	}
 	// TODO reflash admin list
@@ -182,6 +191,7 @@ func (b *Bot) commandDelAdmin(message *tgbotapi.Message) error {
 	return nil
 }
 func (b *Bot) commandRegistration(message *tgbotapi.Message) (link string, err error) {
+
 	q := message.CommandArguments()
 	if len(strings.Replace(q, " ", "", -1)) == 0 {
 		return "", fmt.Errorf("Не верный запрос.\n" + msgHelp)
@@ -193,9 +203,11 @@ func (b *Bot) commandRegistration(message *tgbotapi.Message) (link string, err e
 	}
 	fio := strings.TrimSpace(a[0])
 	phone := strings.TrimSpace(a[1])
-	if err := b.storage.Registration(context.Background(), fio, phone, message.From.ID); err != nil {
+	username := message.From.FirstName + " " + message.From.LastName
+	if err := b.storage.Registration(context.Background(), fio, phone, message.From.ID, username); err != nil {
 		return "", err
 	}
+
 	link, err = b.commandGetLink(message)
 	if err != nil {
 		return "", err
@@ -203,7 +215,9 @@ func (b *Bot) commandRegistration(message *tgbotapi.Message) (link string, err e
 
 	return
 }
+
 func (b *Bot) commandGetLink(message *tgbotapi.Message) (string, error) {
+
 	chat := tgbotapi.ChatInviteLinkConfig{b.channel}
 
 	link, err := b.bot.GetInviteLink(chat)
@@ -212,4 +226,36 @@ func (b *Bot) commandGetLink(message *tgbotapi.Message) (string, error) {
 	}
 
 	return link, nil
+}
+
+func (b *Bot) KickChatMember(idUser int64) error {
+	config := tgbotapi.KickChatMemberConfig{
+		ChatMemberConfig: tgbotapi.ChatMemberConfig{
+			ChatID: b.channel.ChatID,
+			UserID: idUser,
+		},
+	}
+	a, err := b.bot.Request(config)
+	if err != nil {
+		return err
+
+	}
+	fmt.Println(a)
+	return nil
+}
+
+func (b *Bot) SetUsername(chatID int64, userID int64, username string) error {
+	config := tgbotapi.SetChatAdministratorCustomTitle{
+		ChatMemberConfig: tgbotapi.ChatMemberConfig{
+			ChatID: chatID,
+			UserID: userID,
+		},
+		CustomTitle: username,
+	}
+	a, err := b.bot.Request(config)
+	if err != nil {
+		return err
+	}
+	fmt.Println(a)
+	return nil
 }

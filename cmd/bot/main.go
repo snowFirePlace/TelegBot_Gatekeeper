@@ -32,11 +32,12 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-
+	
 	botApi.Debug = true
 	channel := tgbotapi.ChatConfig{
 		ChatID: cfg.TelegramChannel,
 	}
+
 	bot := telegram.NewBot(botApi, channel, s)
 
 	bot.Start()
