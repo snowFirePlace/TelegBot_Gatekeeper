@@ -6,6 +6,7 @@ import (
 	"botTelegram/internal/telegram"
 	"context"
 	"log"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -32,14 +33,16 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-	
+
 	botApi.Debug = true
-	channel := tgbotapi.ChatConfig{
-		ChatID: cfg.TelegramChannel,
-	}
 
-	bot := telegram.NewBot(botApi, channel, s)
+	bot := telegram.NewBot(botApi, cfg.TelegramChannel, s)
+	go func() {
+		for {
+			time.Sleep(24 * time.Hour)
 
+		}
+	}()
 	bot.Start()
 
 }

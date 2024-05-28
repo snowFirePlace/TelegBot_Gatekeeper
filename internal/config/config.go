@@ -6,6 +6,10 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+var (
+	cfg Config
+)
+
 type Config struct {
 	TelegramBotToken string `yaml:"telegram_bot_token"`
 	TelegramChannel  int64  `yaml:"telegram_channel_id"`
@@ -19,10 +23,6 @@ type Admin struct {
 	Unit   string `yaml:"unit"`
 	Phone  string `yaml:"phone"`
 }
-
-var (
-	cfg Config
-)
 
 func Get() Config {
 	yamlFile, err := os.ReadFile("config.yml")
