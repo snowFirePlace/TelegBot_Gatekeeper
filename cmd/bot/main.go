@@ -6,13 +6,14 @@ import (
 	"botTelegram/internal/telegram"
 	"context"
 	"log"
+	"os"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 const (
-	sqliteStoragePath = "data\\sqlite.db"
+	sqliteStoragePath = "data" + string(os.PathSeparator) + "sqlite.db"
 )
 
 var (
@@ -34,7 +35,7 @@ func main() {
 		log.Panic(err)
 	}
 
-	botApi.Debug = true
+	// botApi.Debug = true
 
 	bot := telegram.NewBot(botApi, cfg.TelegramChannel, s)
 	go func() {
