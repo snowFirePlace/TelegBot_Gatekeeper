@@ -25,7 +25,7 @@ type Admin struct {
 }
 
 func Get() Config {
-	yamlFile, err := os.ReadFile("config" + string(os.PathSeparator) + "config.yml")
+	yamlFile, err := os.ReadFile("config.yml")
 	if err != nil {
 		panic(err)
 	}

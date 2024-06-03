@@ -34,4 +34,3 @@ func (b *Bot) kickChatMember(idUser int64) error {
 	}
 	return nil
 }
-
