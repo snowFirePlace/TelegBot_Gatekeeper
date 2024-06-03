@@ -5,11 +5,8 @@ import (
 	"botTelegram/internal/sqlite"
 	"botTelegram/internal/telegram"
 	"context"
-	"fmt"
 	"log"
 	"os"
-	"os/exec"
-	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -19,22 +16,13 @@ const (
 )
 
 var (
+	version = "0.0.0"
+
 	cfg = config.Get()
 )
 
-var version string
-
-func init() {
-	cmd := exec.Command("git", "describe", "--tags")
-	output, err := cmd.Output()
-	if err != nil {
-		fmt.Println("Error getting version:", err)
-		os.Exit(1)
-	}
-	version = strings.TrimSpace(string(output))
-}
 func main() {
-	fmt.Printf("Version: %s\n", version)
+	println(version)
 	os.Exit(1)
 	s, err := sqlite.New(sqliteStoragePath)
 	if err != nil {
