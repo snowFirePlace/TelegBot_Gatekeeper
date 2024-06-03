@@ -5,9 +5,11 @@ import (
 	"botTelegram/internal/sqlite"
 	"botTelegram/internal/telegram"
 	"context"
+	"fmt"
 	"log"
 	"os"
-	"time"
+	"os/exec"
+	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -20,8 +22,20 @@ var (
 	cfg = config.Get()
 )
 
-func main() {
+var version string
 
+func init() {
+	cmd := exec.Command("git", "describe", "--tags")
+	output, err := cmd.Output()
+	if err != nil {
+		fmt.Println("Error getting version:", err)
+		os.Exit(1)
+	}
+	version = strings.TrimSpace(string(output))
+}
+func main() {
+	fmt.Printf("Version: %s\n", version)
+	os.Exit(1)
 	s, err := sqlite.New(sqliteStoragePath)
 	if err != nil {
 		log.Fatalf("can't connect to storage: %s", err)
@@ -35,15 +49,15 @@ func main() {
 		log.Panic(err)
 	}
 
-	// botApi.Debug = true
+	botApi.Debug = true
 
 	bot := telegram.NewBot(botApi, cfg.TelegramChannel, s)
-	go func() {
-		for {
-			time.Sleep(24 * time.Hour)
+	// go func() {
+	// 	for {
+	// 		time.Sleep(24 * time.Hour)
 
-		}
-	}()
+	// 	}
+	// }()
 	bot.Start()
 
 }

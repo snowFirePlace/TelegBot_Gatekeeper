@@ -4,3 +4,4 @@ config.yml
 internal/telegram/messages.go
 Dockerfile
 gatekeeper.tar
+main.exe
