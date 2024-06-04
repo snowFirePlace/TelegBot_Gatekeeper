@@ -6,25 +6,22 @@ import (
 	"botTelegram/internal/telegram"
 	"context"
 	"log"
-	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 const (
-	sqliteStoragePath = "data" + string(os.PathSeparator) + "sqlite.db"
+	sqliteStoragePath = "data\\sqlite.db"
 )
 
 var (
-	version = "0.0.0"
-
-	cfg = config.Get()
+	version string
+	cfg     = config.Get()
 )
 
-// func Versiob()      {}
-// func CheckVersion() {}
 func main() {
 	config.Version = version
+
 	s, err := sqlite.New(sqliteStoragePath)
 	if err != nil {
 		log.Fatalf("can't connect to storage: %s", err)
@@ -38,15 +35,7 @@ func main() {
 		log.Panic(err)
 	}
 
-	// botApi.Debug = false
-
 	bot := telegram.NewBot(botApi, cfg.TelegramChannel, s)
-	// go func() {
-	// 	for {
-	// 		time.Sleep(24 * time.Hour)
 
-	// 	}
-	// }()
 	bot.Start()
-
 }
