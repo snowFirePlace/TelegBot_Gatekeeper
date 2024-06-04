@@ -47,7 +47,7 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 				msg.Text = err.Error()
 			} else {
 				if utf8.RuneCountInString(userList) > 4096 {
-					a := separationMessage(userList)
+					a := separateMessage(userList)
 					for i, m := range a {
 						msg.Text = m
 						msg.ParseMode = "HTML"
@@ -225,13 +225,17 @@ func (b *Bot) registration(message *tgbotapi.Message) (link string, err error) {
 	return
 }
 
-func separationMessage(m string) (a []string) {
-	if utf8.RuneCountInString(m) <= 4096 {
-		a = append(a, m)
-		return
+func separateMessage(message string) []string {
+	if utf8.RuneCountInString(message) <= 4096 {
+		return []string{message}
 	}
-	i := strings.LastIndex(m[:4095], "\n")
-	a = append(a, m[:i])
-	a = append(a, separationMessage(m[i+1:])...)
-	return
+
+	var separatedMessages []string
+	for len(message) > 0 {
+		lastLineIndex := strings.LastIndex(message[:4095], "\n")
+		separatedMessages = append(separatedMessages, message[:lastLineIndex+1])
+		message = message[lastLineIndex+1:]
+	}
+
+	return separatedMessages
 }
