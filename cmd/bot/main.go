@@ -6,12 +6,13 @@ import (
 	"botTelegram/internal/telegram"
 	"context"
 	"log"
+	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 const (
-	sqliteStoragePath = "data\\sqlite.db"
+	sqliteStoragePath = "data" + string(os.PathSeparator) + "sqlite.db"
 )
 
 var (
