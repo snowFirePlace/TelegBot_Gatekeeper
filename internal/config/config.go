@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	cfg Config
+	cfg     Config
+	Version string
 )
 
 type Config struct {

@@ -21,9 +21,10 @@ var (
 	cfg = config.Get()
 )
 
+// func Versiob()      {}
+// func CheckVersion() {}
 func main() {
-	println(version)
-	os.Exit(1)
+	config.Version = version
 	s, err := sqlite.New(sqliteStoragePath)
 	if err != nil {
 		log.Fatalf("can't connect to storage: %s", err)
@@ -37,7 +38,7 @@ func main() {
 		log.Panic(err)
 	}
 
-	botApi.Debug = true
+	// botApi.Debug = false
 
 	bot := telegram.NewBot(botApi, cfg.TelegramChannel, s)
 	// go func() {

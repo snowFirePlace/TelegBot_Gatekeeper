@@ -119,7 +119,7 @@ func (s *Storage) AddUser(ctx context.Context, idUser int64, fio, branch, unit, 
 	return nil
 }
 func (s *Storage) ShowUsers(ctx context.Context) (str string, err error) {
-	q := `SELECT fio, username, branch, unit, phone FROM users Order by fio`
+	q := `SELECT idUserTeleg, fio, username, branch, unit, phone FROM users Order by fio`
 	rows, err := s.db.QueryContext(ctx, q)
 	if err != nil {
 		return "", fmt.Errorf("Error in show users: %w", err)
@@ -127,15 +127,18 @@ func (s *Storage) ShowUsers(ctx context.Context) (str string, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var fio, branch, unit, phone string
-		var username sql.NullString
-		err = rows.Scan(&fio, &username, &branch, &unit, &phone)
+		var idUser, username sql.NullString
+		err = rows.Scan(&idUser, &fio, &username, &branch, &unit, &phone)
 		if err != nil {
 			return "", fmt.Errorf("Error in show users: %w", err)
 		}
-		if username.String == "" {
+
+		if username.String == "" && idUser.String == "" {
 			str = str + fmt.Sprintf("%s, %s, %s, %s\n", fio, branch, unit, phone)
+
 		} else {
-			str = str + fmt.Sprintf("%s, %s, %s, %s, %s\n", fio, username.String, branch, unit, phone)
+			url := fmt.Sprintf("<a href=\"tg://user?id=%s\">%s</a>", idUser.String, username.String)
+			str = str + fmt.Sprintf("%s, %s, %s, %s, %s\n", fio, url, branch, unit, phone)
 		}
 	}
 	return str, nil

@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"botTelegram/internal/config"
 	"context"
 	"fmt"
 	"strings"
@@ -19,8 +20,7 @@ const (
 	commandAddAdmin     = "addadmin"
 	commandShowAdmins   = "listadmin"
 	commandDeleteAdmin  = "deladmin"
-	// todo add command
-	// commandVersion      = "ver"
+	commandVersion      = "ver"
 	// todo delete command
 	// commandLink     = "link"
 	// commandKickUser = "kick"
@@ -50,12 +50,15 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 					a := separationMessage(userList)
 					for i, m := range a {
 						msg.Text = m
+						msg.ParseMode = "HTML"
 						if i != len(a)-1 {
+
 							b.bot.Send(msg)
 						}
 					}
 				} else {
 					msg.Text = userList
+					msg.ParseMode = "HTML"
 				}
 
 			}
@@ -80,6 +83,8 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 			if err := b.delAdmin(message); err != nil {
 				msg.Text = err.Error()
 			}
+		case commandVersion:
+			msg.Text = fmt.Sprintf("Версия Gatekeeper bot: %s", config.Version)
 
 		default:
 			msg.Text = "Неизвестная команда" + "\n" + msgHelpAdmin
