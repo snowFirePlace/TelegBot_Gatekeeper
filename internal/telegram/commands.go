@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -45,9 +46,6 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 			if err != nil {
 				msg.Text = err.Error()
 			} else {
-<<<<<<< HEAD
-				msg.Text = userList
-=======
 				if utf8.RuneCountInString(userList) > 4096 {
 					a := separateMessage(userList)
 					for i, m := range a {
@@ -63,7 +61,6 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 					msg.ParseMode = "HTML"
 				}
 
->>>>>>> dev
 			}
 		case commandDeleteUser:
 			if err := b.deleteUser(message); err != nil {
@@ -227,8 +224,6 @@ func (b *Bot) registration(message *tgbotapi.Message) (link string, err error) {
 
 	return
 }
-<<<<<<< HEAD
-=======
 
 func separateMessage(message string) []string {
 	if utf8.RuneCountInString(message) <= 4096 {
@@ -244,4 +239,3 @@ func separateMessage(message string) []string {
 
 	return separatedMessages
 }
->>>>>>> dev
