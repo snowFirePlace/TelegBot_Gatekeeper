@@ -35,11 +35,8 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-
+	botApi.Debug = true
 	bot := telegram.NewBot(botApi, cfg.TelegramChannel, s)
-	// go func() {
-	// 	for {
-	// 		time.Sleep(24 * time.Hour)
 
 	bot.Start()
 }

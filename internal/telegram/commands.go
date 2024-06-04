@@ -232,6 +232,10 @@ func separateMessage(message string) []string {
 
 	var separatedMessages []string
 	for len(message) > 0 {
+		if len(message) < 4096 {
+			separatedMessages = append(separatedMessages, message)
+			break
+		}
 		lastLineIndex := strings.LastIndex(message[:4095], "\n")
 		separatedMessages = append(separatedMessages, message[:lastLineIndex+1])
 		message = message[lastLineIndex+1:]
