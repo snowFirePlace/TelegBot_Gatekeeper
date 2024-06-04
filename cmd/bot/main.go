@@ -20,9 +20,10 @@ var (
 	cfg     = config.Get()
 )
 
+// func Versiob()      {}
+// func CheckVersion() {}
 func main() {
 	config.Version = version
-
 	s, err := sqlite.New(sqliteStoragePath)
 	if err != nil {
 		log.Fatalf("can't connect to storage: %s", err)
