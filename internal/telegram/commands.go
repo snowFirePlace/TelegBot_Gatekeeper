@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"botTelegram/internal/config"
 	"context"
 	"fmt"
 	"strings"
@@ -18,8 +19,7 @@ const (
 	commandAddAdmin     = "addadmin"
 	commandShowAdmins   = "listadmin"
 	commandDeleteAdmin  = "deladmin"
-	// todo add command
-	// commandVersion      = "ver"
+	commandVersion      = "ver"
 	// todo delete command
 	// commandLink     = "link"
 	// commandKickUser = "kick"
@@ -45,7 +45,25 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 			if err != nil {
 				msg.Text = err.Error()
 			} else {
+<<<<<<< HEAD
 				msg.Text = userList
+=======
+				if utf8.RuneCountInString(userList) > 4096 {
+					a := separateMessage(userList)
+					for i, m := range a {
+						msg.Text = m
+						msg.ParseMode = "HTML"
+						if i != len(a)-1 {
+
+							b.bot.Send(msg)
+						}
+					}
+				} else {
+					msg.Text = userList
+					msg.ParseMode = "HTML"
+				}
+
+>>>>>>> dev
 			}
 		case commandDeleteUser:
 			if err := b.deleteUser(message); err != nil {
@@ -68,6 +86,8 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 			if err := b.delAdmin(message); err != nil {
 				msg.Text = err.Error()
 			}
+		case commandVersion:
+			msg.Text = fmt.Sprintf("Версия Gatekeeper bot: %s", config.Version)
 
 		default:
 			msg.Text = "Неизвестная команда" + "\n" + msgHelpAdmin
@@ -207,3 +227,21 @@ func (b *Bot) registration(message *tgbotapi.Message) (link string, err error) {
 
 	return
 }
+<<<<<<< HEAD
+=======
+
+func separateMessage(message string) []string {
+	if utf8.RuneCountInString(message) <= 4096 {
+		return []string{message}
+	}
+
+	var separatedMessages []string
+	for len(message) > 0 {
+		lastLineIndex := strings.LastIndex(message[:4095], "\n")
+		separatedMessages = append(separatedMessages, message[:lastLineIndex+1])
+		message = message[lastLineIndex+1:]
+	}
+
+	return separatedMessages
+}
+>>>>>>> dev
