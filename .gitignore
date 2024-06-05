@@ -5,3 +5,5 @@ internal/telegram/messages.go
 Dockerfile
 main.exe
 gatekeeper.*
+.env
+.bin/bot
