@@ -21,9 +21,6 @@ const (
 	commandShowAdmins   = "listadmin"
 	commandDeleteAdmin  = "deladmin"
 	commandVersion      = "ver"
-	// todo delete command
-	// commandLink     = "link"
-	// commandKickUser = "kick"
 )
 
 func (b *Bot) Command(message *tgbotapi.Message) error {
@@ -85,7 +82,6 @@ func (b *Bot) Command(message *tgbotapi.Message) error {
 			}
 		case commandVersion:
 			msg.Text = fmt.Sprintf("Версия Gatekeeper bot: %s", config.Version)
-
 		default:
 			msg.Text = "Неизвестная команда" + "\n" + msgHelpAdmin
 		}
@@ -149,6 +145,9 @@ func (b *Bot) deleteUser(message *tgbotapi.Message) error {
 	if idUser, err := b.storage.DelUser(context.Background(), message.From.ID, fio); err != nil {
 		return err
 	} else {
+		if idUser == 0 {
+			return fmt.Errorf("Пользователь %s удален", fio)
+		}
 		err := b.kickChatMember(idUser)
 		if err != nil {
 			return err

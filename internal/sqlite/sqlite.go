@@ -161,7 +161,14 @@ func (s *Storage) ShowUsersWithID(ctx context.Context) (a [][]string, err error)
 	return a, nil
 }
 func (s *Storage) DelUser(ctx context.Context, idUser int64, fio string) (idDelUser int64, err error) {
-	exist, err := s.IsExist(ctx, `SELECT COUNT(*) FROM admins,users where admins.id = users.id and users.fio = ?`, fio)
+	exist, err := s.IsExist(ctx, `SELECT COUNT(*) FROM users WHERE fio = ?`, fio)
+	if err != nil {
+		return 0, fmt.Errorf("Error in delete user: %w", err)
+	}
+	if !exist {
+		return 0, fmt.Errorf("Пользователь не найден")
+	}
+	exist, err = s.IsExist(ctx, `SELECT COUNT(*) FROM admins, users where admins.id = users.id and users.fio = ?`, fio)
 	if err != nil {
 		return 0, fmt.Errorf("Error in delete user: %w", err)
 	}
@@ -169,8 +176,13 @@ func (s *Storage) DelUser(ctx context.Context, idUser int64, fio string) (idDelU
 		return 0, fmt.Errorf("Не возможно удалить пользователя с админской ролью")
 	}
 	q := `Select idUserTeleg from users where fio = ?`
-	if err := s.db.QueryRowContext(ctx, q, fio).Scan(&idDelUser); err != nil {
+	var id sql.NullString
+	if err := s.db.QueryRowContext(ctx, q, fio).Scan(&id); err != nil {
 		return 0, fmt.Errorf("Error in delete user: %w", err)
+	} else {
+		if id.Valid {
+			idDelUser, _ = strconv.ParseInt(id.String, 10, 64)
+		}
 	}
 
 	q = `DELETE FROM users WHERE fio = ?`
@@ -181,6 +193,7 @@ func (s *Storage) DelUser(ctx context.Context, idUser int64, fio string) (idDelU
 	if err := s.log(ctx, fmt.Sprintf("User %d deleted: %s", idUser, fio)); err != nil {
 		return 0, err
 	}
+
 	return idDelUser, nil
 }
 func (s *Storage) GetAdmins(ctx context.Context) (err error) {
