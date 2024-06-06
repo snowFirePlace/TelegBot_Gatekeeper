@@ -2,8 +2,7 @@
 data/sqlite.db
 config.yml
 internal/telegram/messages.go
-Dockerfile
-main.exe
+*.exe
 gatekeeper.*
 .env
 .bin/bot
