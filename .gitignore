@@ -1,4 +1,3 @@
-
 data/sqlite.db
 config.yml
 internal/telegram/messages.go
